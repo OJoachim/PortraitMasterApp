@@ -51,16 +51,18 @@ exports.loadAll = async (req, res) => {
 
 exports.vote = async (req, res) => {
   
-/*  try {
+  try {
     const photoToUpdate = await Photo.findOne({_id: req.params.id});
-    const voter = await Voter.findOne({user: req.clientIp})
+    
     if (!photoToUpdate) res.status(404).json({message: 'Not found'});
     else {
+      const voter = await Voter.findOne({user: req.clientIp, votes: req.params.id })
       if (voter) {
         if (voter.votes.includes(photoToUpdate._id)) {
-          res.status(500).json({message: 'you can\'t vote again for the same photo'})
+          res.status(500).json({message: 'error: you can\'t vote again for the same photo'})
         } else {
-          voter.votes.push(photoToUpdate._id);
+          voter.votes.push(req.params.id);
+          voter.save();
           photoToUpdate.votes++;
           photoToUpdate.save();
           res.send({message: 'OK'});
@@ -75,42 +77,6 @@ exports.vote = async (req, res) => {
         photoToUpdate.save();
         res.send({message: 'OK'});
       }
-    }
-  } catch (err) {
-    res.status(500).json(err);
-  } */
-  
-  try {
-    const user = await Voter.findOne({ user: req.clientIp }); // user = client with some IP: clientIp
-    if (user) {
-      // user can be in base as voter and can't vote for the same photos 
-      //or is not in base and can vote for every photos
-      const voterInBase = await Voter.findOne({
-        $and: [{ user: req.clientIp, votes: req.params.id }],
-      });
-
-      if (!voterInBase) {
-        await Voter.updateOne(
-          { user: req.clientIp },
-          { $push: { votes: [req.params.id] } }
-        );
-        const photoToUpdate = await Photo.findOne({ _id: req.params.id });
-        photoToUpdate.votes++;
-        photoToUpdate.save();
-        res.send({ message: "OK" });
-      } else {
-        res.status(500).json({message: 'error'});
-      }
-    } else {
-      const newVoter = new Voter({
-        user: req.clientIp,
-        votes: [req.params.id],
-      });
-      await newVoter.save();
-      const photoToUpdate = await Photo.findOne({ _id: req.params.id });
-      photoToUpdate.votes++;
-      photoToUpdate.save();
-      res.send({ message: "OK" });
     }
   } catch (err) {
     res.status(500).json(err);
